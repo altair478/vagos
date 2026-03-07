@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VAGOS — Claim tu Airdrop</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.1/ethers.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #e8e6e0;
+      --surface: #ffffff;
+      --border: #d0cdc4;
+      --text: #0a0a09;
+      --text-muted: #6b6860;
+      --accent: #1a1a18;
+      --accent-hover: #333330;
+      --green: #16a34a;
+      --green-bg: #f0fdf4;
+      --orange: #ea580c;
+      --orange-bg: #fff7ed;
+      --blue: #2563eb;
+      --radius: 16px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Falling tokens canvas */
+    #bgCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.65;
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* NAV */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 40px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(245,244,240,0.85);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .nav-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 20px;
+      letter-spacing: -0.5px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav-logo-badge {
+      background: var(--accent);
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .network-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: var(--surface);
+    }
+
+    .network-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--blue);
+    }
+
+    /* MAIN */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 60px 20px 80px;
+      gap: 24px;
+    }
+
+    /* HEADER */
+    .header {
+      text-align: center;
+      max-width: 520px;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .header-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 5px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      letter-spacing: 0.3px;
+    }
+
+    .header-tag-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+
+    h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      line-height: 1.1;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+
+    h1 span {
+      color: var(--text-muted);
+    }
+
+    .header-sub {
+      font-size: 15px;
+      color: var(--text-muted);
+      font-weight: 400;
+      max-width: 380px;
+      margin: 0 auto;
+    }
+
+    /* CARD */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      width: 100%;
+      max-width: 480px;
+      overflow: hidden;
+      animation: fadeUp 0.6s ease 0.1s both;
+    }
+
+    .card-header {
+      padding: 24px 28px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .card-body {
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* ALLOCATION BOX */
+    .allocation-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .allocation-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .allocation-amount {
+      font-family: 'Syne', sans-serif;
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .allocation-symbol {
+      font-size: 14px;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-top: 4px;
+    }
+
+    .token-icon {
+      width: 52px;
+      height: 52px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      font-weight: 800;
+      color: white;
+      letter-spacing: -0.5px;
+      flex-shrink: 0;
+    }
+
+    /* STATUS ROW */
+    .status-row {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .status-item-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .status-icon {
+      font-size: 15px;
+    }
+
+    .status-value {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge-locked {
+      background: var(--orange-bg);
+      color: var(--orange);
+    }
+
+    .badge-unlocked {
+      background: var(--green-bg);
+      color: var(--green);
+    }
+
+    .badge-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* COUNTDOWN */
+    .countdown {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .countdown-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 8px;
+      text-align: center;
+    }
+
+    .countdown-num {
+      font-family: 'Syne', sans-serif;
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .countdown-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* DIVIDER */
+    .divider {
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* WALLET */
+    .wallet-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+
+    .wallet-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      flex-shrink: 0;
+    }
+
+    .wallet-address {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      font-family: monospace;
+    }
+
+    .wallet-network {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* BUTTONS */
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 14px 20px;
+      border-radius: 12px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s ease;
+      letter-spacing: -0.2px;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .btn-primary:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text);
+      border: 1.5px solid var(--border);
+    }
+
+    .btn-outline:hover {
+      border-color: var(--accent);
+      background: var(--bg);
+    }
+
+    .btn-success {
+      background: var(--green);
+      color: white;
+    }
+
+    .btn-success:hover:not(:disabled) {
+      background: #15803d;
+      transform: translateY(-1px);
+    }
+
+    /* ALERT */
+    .alert {
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      line-height: 1.5;
+    }
+
+    .alert-info {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+    }
+
+    .alert-success {
+      background: var(--green-bg);
+      color: var(--green);
+      border: 1px solid #bbf7d0;
+    }
+
+    .alert-error {
+      background: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+    }
+
+    .alert-warning {
+      background: var(--orange-bg);
+      color: var(--orange);
+      border: 1px solid #fed7aa;
+    }
+
+    /* ACCORDION */
+    .accordion-item {
+      padding: 18px 28px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .accordion-item:hover { background: var(--bg); }
+
+    .accordion-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: 'Syne', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      user-select: none;
+    }
+
+    .accordion-icon {
+      font-size: 22px;
+      color: var(--text-muted);
+      transition: transform 0.2s ease;
+      line-height: 1;
+    }
+
+    .accordion-icon.open { transform: rotate(45deg); }
+
+    .accordion-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease, padding 0.3s ease;
+    }
+
+    .accordion-body.open {
+      max-height: 800px;
+      padding-top: 16px;
+    }
+
+    .accordion-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 0 28px;
+    }
+
+    .accordion-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .accordion-list li {
+      font-size: 15px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      padding-left: 20px;
+      position: relative;
+    }
+
+    .accordion-list li::before {
+      content: '→';
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-size: 12px;
+    }
+
+    /* SPINNER */
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    /* FOOTER */
+    footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 12px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    footer a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    footer a:hover { color: var(--text); }
+
+    /* ANIMATIONS */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* HIDDEN */
+    .hidden { display: none !important; }
+
+    /* RESPONSIVE */
+    @media (max-width: 600px) {
+      nav { padding: 16px 20px; }
+      h1 { font-size: 32px; }
+      .card-body { padding: 20px; }
+      .allocation-amount { font-size: 26px; }
+    }
+  </style>
+</head>
+<body>
+<canvas id="bgCanvas"></canvas>
+<div class="page">
+
+  <!-- NAV -->
+  <nav>
+    <div class="nav-logo">
+      VAGOS
+      <span class="nav-logo-badge">Foundation</span>
+    </div>
+    <div class="nav-right">
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main>
+    <div class="header">
+      <div class="header-tag">
+        <div class="header-tag-dot"></div>
+        Airdrop Activo
+      </div>
+      <h1>Reclamá<br/><span>tus tokens.</span></h1>
+      <p class="header-sub">Conectá tu wallet para verificar tu asignación y reclamar tus VAGO una vez finalizado el período de bloqueo.</p>
+
+      <!-- COUNTDOWN — actualizar TGE_TIMESTAMP cuando se deploye el vesting -->
+      <div id="header-countdown" style="margin-top: 28px;">
+        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px; letter-spacing: 0.05em; text-transform: uppercase;">El reclamo comienza en:</div>
+        <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+          <div style="text-align: center; background: rgba(0,0,0,0.04); border: 1px solid var(--border); border-radius: 10px; padding: 12px 18px; min-width: 64px;">
+            <div id="hcdDays" style="font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: var(--primary); line-height: 1;">—</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Días</div>
+          </div>
+          <div style="text-align: center; background: rgba(0,0,0,0.04); border: 1px solid var(--border); border-radius: 10px; padding: 12px 18px; min-width: 64px;">
+            <div id="hcdHours" style="font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: var(--primary); line-height: 1;">—</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Horas</div>
+          </div>
+          <div style="text-align: center; background: rgba(0,0,0,0.04); border: 1px solid var(--border); border-radius: 10px; padding: 12px 18px; min-width: 64px;">
+            <div id="hcdMins" style="font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: var(--primary); line-height: 1;">—</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Mins</div>
+          </div>
+          <div style="text-align: center; background: rgba(0,0,0,0.04); border: 1px solid var(--border); border-radius: 10px; padding: 12px 18px; min-width: 64px;">
+            <div id="hcdSecs" style="font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: var(--primary); line-height: 1;">—</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Segs</div>
+          </div>
+        </div>
+        <div id="hcdPending" style="font-size: 13px; color: var(--text-muted); margin-top: 14px;">⏳ Fecha de deploy del vesting pendiente</div>
+      </div>
+    </div>
+
+    <!-- CARD -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Token Claim</span>
+        <span id="statusBadge" class="badge badge-locked">
+          <span class="badge-dot"></span>
+          Bloqueado
+        </span>
+      </div>
+
+      <div class="card-body">
+
+        <!-- NOT CONNECTED STATE -->
+        <div id="stateNotConnected">
+          <div class="allocation-box" style="margin-bottom: 4px;">
+            <div>
+              <div class="allocation-label">Tu asignación</div>
+              <div class="allocation-amount">—</div>
+              <div class="allocation-symbol">VAGO</div>
+            </div>
+            <div class="token-icon">V</div>
+          </div>
+
+          <div class="alert alert-info">
+            ℹ️ Conectá tu wallet para ver tu asignación y el estado del claim.
+          </div>
+
+          <button class="btn btn-primary" onclick="connectWallet()">
+            Conectar Wallet
+          </button>
+        </div>
+
+        <!-- CONNECTED STATE -->
+        <div id="stateConnected" class="hidden">
+
+          <div class="wallet-info">
+            <div class="wallet-avatar"></div>
+            <div>
+              <div class="wallet-address" id="walletAddress">0x0000...0000</div>
+              <div class="wallet-network">Base Mainnet</div>
+            </div>
+          </div>
+
+          <div class="allocation-box">
+            <div>
+              <div class="allocation-label">Tu asignación</div>
+              <div class="allocation-amount" id="allocationAmount">0</div>
+              <div class="allocation-symbol">VAGO</div>
+            </div>
+            <div class="token-icon">V</div>
+          </div>
+
+          <!-- NO ALLOCATION -->
+          <div id="stateNoAllocation" class="hidden">
+            <div style="text-align: center; padding: 24px 0;">
+              <div style="font-size: 48px; margin-bottom: 16px;">😕</div>
+              <div style="font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 8px;">¡Ups! No sos elegible</div>
+              <div style="font-size: 15px; color: var(--text-muted); line-height: 1.6; max-width: 320px; margin: 0 auto 24px;">Esta wallet no tiene asignación en el airdrop de VAGOS. Solo los miembros originales del grupo pueden reclamar tokens.</div>
+              <button class="btn btn-outline" onclick="disconnectWallet()">Probar con otra wallet</button>
+            </div>
+          </div>
+
+          <!-- HAS ALLOCATION -->
+          <div id="stateHasAllocation" class="hidden">
+
+            <!-- LOCKED -->
+            <div id="stateLocked" class="hidden">
+              <div class="status-row">
+                <div class="status-item">
+                  <div class="status-item-left">
+                    <span class="status-icon">🔒</span>
+                    Estado
+                  </div>
+                  <span class="badge badge-locked"><span class="badge-dot"></span>Bloqueado</span>
+                </div>
+                <div class="status-item">
+                  <div class="status-item-left">
+                    <span class="status-icon">📅</span>
+                    Desbloqueado en
+                  </div>
+                  <span class="status-value" id="unlockDate">—</span>
+                </div>
+              </div>
+
+              <div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px; text-align: center; text-transform: uppercase; letter-spacing: 0.5px;">Tiempo restante</div>
+                <div class="countdown">
+                  <div class="countdown-item">
+                    <div class="countdown-num" id="cdDays">—</div>
+                    <div class="countdown-label">Días</div>
+                  </div>
+                  <div class="countdown-item">
+                    <div class="countdown-num" id="cdHours">—</div>
+                    <div class="countdown-label">Horas</div>
+                  </div>
+                  <div class="countdown-item">
+                    <div class="countdown-num" id="cdMins">—</div>
+                    <div class="countdown-label">Mins</div>
+                  </div>
+                  <div class="countdown-item">
+                    <div class="countdown-num" id="cdSecs">—</div>
+                    <div class="countdown-label">Segs</div>
+                  </div>
+                </div>
+              </div>
+
+              <button class="btn btn-primary" disabled>
+                🔒 Tokens bloqueados
+              </button>
+              <button class="btn btn-outline" onclick="disconnectWallet()" style="margin-top: 8px;">Desconectar</button>
+            </div>
+
+            <!-- UNLOCKED - CAN CLAIM -->
+            <div id="stateUnlocked" class="hidden">
+              <div class="status-row">
+                <div class="status-item">
+                  <div class="status-item-left">
+                    <span class="status-icon">✅</span>
+                    Estado
+                  </div>
+                  <span class="badge badge-unlocked"><span class="badge-dot"></span>Disponible</span>
+                </div>
+              </div>
+
+              <div class="alert alert-success">
+                🎉 ¡Tus tokens están disponibles para reclamar!
+              </div>
+
+              <button class="btn btn-success" id="claimBtn" onclick="claimTokens()">
+                Reclamar tokens VAGO
+              </button>
+              <button class="btn btn-outline" onclick="disconnectWallet()" style="margin-top: 8px;">Desconectar</button>
+            </div>
+
+            <!-- ALREADY CLAIMED -->
+            <div id="stateClaimed" class="hidden">
+              <div class="alert alert-success">
+                ✅ Ya reclamaste tus tokens VAGO exitosamente.
+              </div>
+              <button class="btn btn-outline" onclick="disconnectWallet()">Desconectar</button>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- LOADING -->
+        <div id="stateLoading" class="hidden">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 20px 0;">
+            <div style="width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite;"></div>
+            <div style="font-size: 13px; color: var(--text-muted);" id="loadingText">Cargando...</div>
+          </div>
+        </div>
+
+        <!-- TX PENDING -->
+        <div id="stateTxPending" class="hidden">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 20px 0;">
+            <div style="width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--green); border-radius: 50%; animation: spin 0.7s linear infinite;"></div>
+            <div style="font-size: 13px; color: var(--text-muted);">Procesando transacción...</div>
+            <div style="font-size: 11px; color: var(--text-muted);">Confirmá en tu wallet</div>
+          </div>
+        </div>
+
+        <!-- ERROR -->
+        <div id="stateError" class="hidden">
+          <div class="alert alert-error" id="errorMessage">Error desconocido.</div>
+          <button class="btn btn-outline" onclick="resetToConnected()" style="margin-top: 12px;">Reintentar</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ACCORDION CARD -->
+    <div class="card" style="animation-delay: 0.2s;">
+      <div class="card-body" style="gap: 0; padding: 0;">
+
+        <!-- INFO AIRDROP -->
+        <div class="accordion-item" onclick="toggleAccordion('acc3')">
+          <div class="accordion-header">
+            <span>Información del airdrop</span>
+            <span class="accordion-icon" id="icon-acc3">＋</span>
+          </div>
+          <div class="accordion-body" id="acc3">
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+
+              <div>
+                <div style="font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px;">¿Qué es este airdrop?</div>
+                <div style="font-size: 14px; color: var(--text-muted); line-height: 1.7;">Es una distribución inicial de tokens VAGO destinada exclusivamente a los miembros fundadores del grupo. Una forma de repartir de manera justa el poder de gobernanza desde el primer día, sin favoritismos ni concentración de poder.</div>
+              </div>
+
+              <div>
+                <div style="font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px;">Tamaño de la distribución</div>
+                <div style="font-size: 14px; color: var(--text-muted); line-height: 1.7;">En este airdrop se reparte el 25% del suministro total, lo que equivale a 250 tokens distribuidos de manera equitativa entre los miembros elegibles.</div>
+              </div>
+
+              <div>
+                <div style="font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px;">¿Qué es el bloqueo de 270 días desde el TGE?</div>
+                <div style="font-size: 14px; color: var(--text-muted); line-height: 1.7;">TGE significa Token Generation Event, es decir, el momento en que el token fue creado y puesto en circulación. El bloqueo de 270 días (9 meses) significa que los tokens existen pero no podés moverlos ni venderlos durante ese período. Tampoco podés reclamarlos antes de que se cumpla: el claim solo estará disponible una vez finalizado el plazo. Es como un plazo fijo: el dinero está ahí, pero hay que esperar.</div>
+              </div>
+
+              <div>
+                <div style="font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px;">¿Por qué no puedo reclamar mis tokens ahora?</div>
+                <div style="font-size: 14px; color: var(--text-muted); line-height: 1.7;">Esto es para garantizar que todos los miembros mantengan su compromiso con el proyecto a largo plazo. Una vez finalizado el período, el botón de claim se habilitará automáticamente.</div>
+              </div>
+
+              <div>
+                <div style="font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px;">¿Qué utilidad tiene el token VAGO?</div>
+                <div style="font-size: 14px; color: var(--text-muted); line-height: 1.7;">VAGO es el token de gobernanza del grupo. Con él podés votar propuestas, decidir el destino de los fondos de la tesorería y participar activamente en las decisiones colectivas. Cuantos más tokens tengas, más peso tiene tu voto. Si vendés tus tokens, perdés poder de gobernanza.</div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-divider"></div>
+
+        <!-- CRITERIOS -->
+        <div class="accordion-item" onclick="toggleAccordion('acc1')">
+          <div class="accordion-header">
+            <span>Criterios de elegibilidad</span>
+            <span class="accordion-icon" id="icon-acc1">＋</span>
+          </div>
+          <div class="accordion-body" id="acc1">
+            <ul class="accordion-list">
+              <li>Ser un miembro actual del grupo <strong>JUNTADAS</strong> o haber formado parte de él en algún momento, incluso hasta antes del 31 de diciembre de 2024.</li>
+              <li>Haber participado en más de 3 asados.</li>
+              <li>Haber enviado una dirección de billetera para recibir tokens cuando se te pidió.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="accordion-divider"></div>
+
+        <!-- DISTRIBUCION -->
+        <div class="accordion-item" onclick="toggleAccordion('acc2')">
+          <div class="accordion-header">
+            <span>Distribución</span>
+            <span class="accordion-icon" id="icon-acc2">＋</span>
+          </div>
+          <div class="accordion-body" id="acc2">
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div class="status-item">
+                <div class="status-item-left"><span class="status-icon">👥</span>Miembros elegibles</div>
+                <span class="status-value">5</span>
+              </div>
+              <div class="status-item">
+                <div class="status-item-left"><span class="status-icon">🪙</span>Token por miembro</div>
+                <span class="status-value">50 VAGO</span>
+              </div>
+              <div class="status-item">
+                <div class="status-item-left"><span class="status-icon">📦</span>Total airdrop</div>
+                <span class="status-value">25% del suministro total</span>
+              </div>
+              <div class="status-item">
+                <div class="status-item-left"><span class="status-icon">🔒</span>Bloqueo</div>
+                <span class="status-value">270 días desde TGE</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <span>© 2026 VAGOS Foundation</span>
+    <span>·</span>
+    <a href="https://basescan.org/token/0x92baebc94D59DD82E08F4Fbb2d4eB5511017eDE5" target="_blank">Ver contrato</a>
+    <span>·</span>
+    <a href="https://basescan.org" target="_blank">Basescan</a>
+  </footer>
+
+</div>
+
+<script>
+  function toggleAccordion(id) {
+    const body = document.getElementById(id);
+    const icon = document.getElementById('icon-' + id);
+    const isOpen = body.classList.contains('open');
+    ['acc1','acc2','acc3'].forEach(a => {
+      document.getElementById(a).classList.remove('open');
+      document.getElementById('icon-' + a).classList.remove('open');
+    });
+    if (!isOpen) {
+      body.classList.add('open');
+      icon.classList.add('open');
+    }
+  }
+
+  // ============================================================
+  // CONFIG — Actualizá estas direcciones cuando deployés en mainnet
+  // ============================================================
+  const TOKEN_ADDRESS   = "0x92baebc94D59DD82E08F4Fbb2d4eB5511017eDE5";
+  const VESTING_ADDRESS = "0x6eAf69E3D7EAe460787d00BfBDcf46D0713232BC";
+
+  const VESTING_ABI = [
+    "function claim() external",
+    "function allocations(address) view returns (uint256)",
+    "function claimed(address) view returns (bool)",
+    "function unlockTime() view returns (uint256)",
+    "function timeUntilUnlock() view returns (uint256)"
+  ];
+
+  // ============================================================
+  let provider, signer, vestingContract, walletAddr;
+  let countdownInterval;
+
+  function showState(id) {
+    const ids = [
+      'stateNotConnected','stateConnected','stateLoading',
+      'stateTxPending','stateError','stateNoAllocation',
+      'stateHasAllocation','stateLocked','stateUnlocked','stateClaimed'
+    ];
+    ids.forEach(i => {
+      const el = document.getElementById(i);
+      if (el) el.classList.add('hidden');
+    });
+    const target = document.getElementById(id);
+    if (target) target.classList.remove('hidden');
+  }
+
+  async function connectWallet() {
+    // Detectar proveedor — compatible con MetaMask, Coinbase, Rabby y cualquier EIP-1193
+    let rawProvider = null;
+    if (window.ethereum) {
+      if (window.ethereum.providers && window.ethereum.providers.length > 0) {
+        rawProvider = window.ethereum.providers.find(p => p.isMetaMask) || window.ethereum.providers[0];
+      } else {
+        rawProvider = window.ethereum;
+      }
+    }
+
+    if (!rawProvider) {
+      showError("No se detectó ninguna wallet. Instalá MetaMask, Coinbase Wallet, Rabby u otra wallet compatible.");
+      return;
+    }
+    try {
+      showState('stateLoading');
+      document.getElementById('loadingText').textContent = 'Conectando wallet...';
+
+      provider = new ethers.BrowserProvider(rawProvider);
+      await provider.send("eth_requestAccounts", []);
+
+      const network = await provider.getNetwork();
+      if (network.chainId !== 8453n) {
+        try {
+          await rawProvider.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0x2105' }]
+          });
+          provider = new ethers.BrowserProvider(rawProvider);
+        } catch(switchErr) {
+          if (switchErr.code === 4902) {
+            await rawProvider.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: '0x2105',
+                chainName: 'Base',
+                nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+                rpcUrls: ['https://mainnet.base.org'],
+                blockExplorerUrls: ['https://basescan.org'],
+              }]
+            });
+            provider = new ethers.BrowserProvider(rawProvider);
+          } else {
+            showError("Por favor cambiá tu wallet a la red Base para continuar.");
+            return;
+          }
+        }
+      }
+
+      signer = await provider.getSigner();
+      walletAddr = await signer.getAddress();
+
+      document.getElementById('walletAddress').textContent =
+        walletAddr.slice(0,6) + '...' + walletAddr.slice(-4);
+
+      vestingContract = new ethers.Contract(VESTING_ADDRESS, VESTING_ABI, signer);
+
+      showState('stateConnected');
+      await loadClaimData();
+
+    } catch(e) {
+      if (e.code !== 4001) {
+        showError("Error al conectar: " + (e.message || e));
+      } else {
+        showState('stateDisconnected');
+      }
+    }
+  }
+
+  async function loadClaimData() {
+    try {
+      showState('stateLoading');
+      document.getElementById('loadingText').textContent = 'Verificando asignación...';
+
+      const [allocation, hasClaimed, timeLeft, unlockTime] = await Promise.all([
+        vestingContract.allocations(walletAddr),
+        vestingContract.claimed(walletAddr),
+        vestingContract.timeUntilUnlock(),
+        vestingContract.unlockTime()
+      ]);
+
+      showState('stateConnected');
+
+      if (allocation === 0n) {
+        document.getElementById('allocationAmount').textContent = '0';
+        document.getElementById('stateNoAllocation').classList.remove('hidden');
+        return;
+      }
+
+      const amountFormatted = ethers.formatEther(allocation);
+      document.getElementById('allocationAmount').textContent =
+        parseFloat(amountFormatted).toFixed(0);
+
+      document.getElementById('stateHasAllocation').classList.remove('hidden');
+
+      if (hasClaimed) {
+        document.getElementById('statusBadge').className = 'badge badge-unlocked';
+        document.getElementById('statusBadge').innerHTML = '<span class="badge-dot"></span>Reclamado';
+        document.getElementById('stateClaimed').classList.remove('hidden');
+        return;
+      }
+
+      if (timeLeft > 0n) {
+        // LOCKED
+        document.getElementById('statusBadge').className = 'badge badge-locked';
+        document.getElementById('statusBadge').innerHTML = '<span class="badge-dot"></span>Bloqueado';
+
+        const unlockDate = new Date(Number(unlockTime) * 1000);
+        document.getElementById('unlockDate').textContent =
+          unlockDate.toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' });
+
+        document.getElementById('stateLocked').classList.remove('hidden');
+        startCountdown(Number(timeLeft));
+      } else {
+        // UNLOCKED
+        document.getElementById('statusBadge').className = 'badge badge-unlocked';
+        document.getElementById('statusBadge').innerHTML = '<span class="badge-dot"></span>Disponible';
+        document.getElementById('stateUnlocked').classList.remove('hidden');
+      }
+
+    } catch(e) {
+      showError("Error al cargar datos del contrato: " + (e.message || e));
+    }
+  }
+
+  async function claimTokens() {
+    try {
+      showState('stateConnected');
+      document.getElementById('stateHasAllocation').classList.remove('hidden');
+      showState('stateTxPending');
+
+      const tx = await vestingContract.claim();
+      await tx.wait();
+
+      // SUCCESS
+      showState('stateConnected');
+      document.getElementById('allocationAmount').textContent =
+        document.getElementById('allocationAmount').textContent;
+      document.getElementById('stateHasAllocation').classList.remove('hidden');
+      document.getElementById('stateClaimed').classList.remove('hidden');
+
+      document.getElementById('statusBadge').className = 'badge badge-unlocked';
+      document.getElementById('statusBadge').innerHTML = '<span class="badge-dot"></span>Reclamado';
+
+    } catch(e) {
+      const msg = e?.reason || e?.message || "Error al procesar el claim.";
+      showState('stateConnected');
+      document.getElementById('stateHasAllocation').classList.remove('hidden');
+      document.getElementById('stateUnlocked').classList.remove('hidden');
+      showError(msg);
+    }
+  }
+
+  function startCountdown(secondsLeft) {
+    if (countdownInterval) clearInterval(countdownInterval);
+    let remaining = secondsLeft;
+
+    function update() {
+      if (remaining <= 0) {
+        clearInterval(countdownInterval);
+        loadClaimData();
+        return;
+      }
+      const d = Math.floor(remaining / 86400);
+      const h = Math.floor((remaining % 86400) / 3600);
+      const m = Math.floor((remaining % 3600) / 60);
+      const s = remaining % 60;
+      document.getElementById('cdDays').textContent  = String(d).padStart(2,'0');
+      document.getElementById('cdHours').textContent = String(h).padStart(2,'0');
+      document.getElementById('cdMins').textContent  = String(m).padStart(2,'0');
+      document.getElementById('cdSecs').textContent  = String(s).padStart(2,'0');
+      remaining--;
+    }
+    update();
+    countdownInterval = setInterval(update, 1000);
+  }
+
+  function showError(msg) {
+    document.getElementById('errorMessage').textContent = '⚠️ ' + msg;
+    // Show error inside connected state if connected
+    if (walletAddr) {
+      showState('stateConnected');
+      const errDiv = document.getElementById('stateError');
+      errDiv.classList.remove('hidden');
+    } else {
+      showState('stateNotConnected');
+      const errDiv = document.getElementById('stateError');
+      errDiv.classList.remove('hidden');
+    }
+  }
+
+  function resetToConnected() {
+    document.getElementById('stateError').classList.add('hidden');
+    if (walletAddr) loadClaimData();
+  }
+
+  function disconnectWallet() {
+    provider = signer = vestingContract = walletAddr = null;
+    if (countdownInterval) clearInterval(countdownInterval);
+    showState('stateNotConnected');
+    document.getElementById('statusBadge').className = 'badge badge-locked';
+    document.getElementById('statusBadge').innerHTML = '<span class="badge-dot"></span>Bloqueado';
+  }
+
+  // Listen for account changes
+  if (window.ethereum) {
+    window.ethereum.on('accountsChanged', () => {
+      if (walletAddr) connectWallet();
+    });
+    window.ethereum.on('chainChanged', () => {
+      if (walletAddr) connectWallet();
+    });
+  }
+
+  // ──────────────────────────────────────────
+  //  COUNTDOWN HEADER
+  //  Cuando deploys el vesting, reemplazá TGE_TIMESTAMP
+  //  con el Unix timestamp (en ms) del deploy + 270 días.
+  //  Ejemplo: si deployás el 1 de marzo 2025 00:00 UTC
+  //  TGE_TIMESTAMP = new Date('2025-03-01').getTime() + (270 * 24 * 60 * 60 * 1000)
+  // ──────────────────────────────────────────
+  const TGE_TIMESTAMP = 1796178835000; // 2 de diciembre 2026 02:33:55 UTC (270 días desde deploy)
+
+  function updateHeaderCountdown() {
+    const pending = document.getElementById('hcdPending');
+    if (!TGE_TIMESTAMP) {
+      // Sin fecha aún — mostrar guiones
+      ['hcdDays','hcdHours','hcdMins','hcdSecs'].forEach(id => {
+        document.getElementById(id).textContent = '—';
+      });
+      if (pending) pending.style.display = 'block';
+      return;
+    }
+    if (pending) pending.style.display = 'none';
+    const now = Date.now();
+    const diff = TGE_TIMESTAMP - now;
+    if (diff <= 0) {
+      ['hcdDays','hcdHours','hcdMins','hcdSecs'].forEach(id => {
+        document.getElementById(id).textContent = '0';
+      });
+      document.getElementById('hcdPending').textContent = '✅ Claim habilitado';
+      document.getElementById('hcdPending').style.display = 'block';
+      return;
+    }
+    const days  = Math.floor(diff / (1000*60*60*24));
+    const hours = Math.floor((diff % (1000*60*60*24)) / (1000*60*60));
+    const mins  = Math.floor((diff % (1000*60*60)) / (1000*60));
+    const secs  = Math.floor((diff % (1000*60)) / 1000);
+    document.getElementById('hcdDays').textContent  = String(days).padStart(2,'0');
+    document.getElementById('hcdHours').textContent = String(hours).padStart(2,'0');
+    document.getElementById('hcdMins').textContent  = String(mins).padStart(2,'0');
+    document.getElementById('hcdSecs').textContent  = String(secs).padStart(2,'0');
+  }
+  updateHeaderCountdown();
+  setInterval(updateHeaderCountdown, 1000);
+</script>
+<script>
+  // FALLING TOKENS ANIMATION
+  const canvas = document.getElementById('bgCanvas');
+  const ctx = canvas.getContext('2d');
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const symbols = ['V', 'VAGO', '◈', '⬡', 'V'];
+  const tokens = [];
+  const COUNT = 28;
+
+  for (let i = 0; i < COUNT; i++) {
+    tokens.push({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight * 2 - window.innerHeight,
+      size: Math.random() * 18 + 14,
+      speed: Math.random() * 0.6 + 0.3,
+      opacity: Math.random() * 0.5 + 0.3,
+      rotation: Math.random() * Math.PI * 2,
+      rotSpeed: (Math.random() - 0.5) * 0.015,
+      symbol: symbols[Math.floor(Math.random() * symbols.length)],
+      drift: (Math.random() - 0.5) * 0.3,
+      isCircle: Math.random() > 0.5
+    });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    tokens.forEach(t => {
+      ctx.save();
+      ctx.globalAlpha = t.opacity;
+      ctx.translate(t.x, t.y);
+      ctx.rotate(t.rotation);
+
+      if (t.isCircle) {
+        // Draw coin circle
+        ctx.beginPath();
+        ctx.arc(0, 0, t.size, 0, Math.PI * 2);
+        ctx.strokeStyle = '#1a1a18';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(26,26,24,0.06)';
+        ctx.fill();
+        // V inside
+        ctx.font = `bold ${t.size * 0.8}px Syne, sans-serif`;
+        ctx.fillStyle = '#1a1a18';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('V', 0, 0);
+      } else {
+        // Draw text symbol
+        ctx.font = `600 ${t.size}px Syne, sans-serif`;
+        ctx.fillStyle = '#1a1a18';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(t.symbol, 0, 0);
+      }
+
+      ctx.restore();
+
+      // Update position
+      t.y += t.speed;
+      t.x += t.drift;
+      t.rotation += t.rotSpeed;
+
+      // Reset when off screen
+      if (t.y > canvas.height + 40) {
+        t.y = -40;
+        t.x = Math.random() * canvas.width;
+      }
+      if (t.x < -40) t.x = canvas.width + 40;
+      if (t.x > canvas.width + 40) t.x = -40;
+    });
+
+    requestAnimationFrame(draw);
+  }
+
+  draw();
+</script>
+</body>
+</html>
