@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VAGOS — DAO</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0a;
+      --bg2: #111111;
+      --bg3: #181818;
+      --border: #222222;
+      --border2: #2a2a2a;
+      --text: #f0ede8;
+      --text-muted: #666660;
+      --text-mid: #999994;
+      --accent: #c8f542;
+      --accent2: #a8d420;
+      --accent-dim: rgba(200,245,66,0.08);
+      --accent-dim2: rgba(200,245,66,0.15);
+      --orange: #ff6b35;
+      --blue: #4f9eff;
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* NOISE OVERLAY */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.4;
+    }
+
+    /* NAV */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 48px;
+      height: 64px;
+      background: rgba(10,10,10,0.8);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 18px;
+      letter-spacing: -0.5px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav-logo-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-link {
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+
+    .nav-link:hover { color: var(--text); background: var(--bg3); }
+
+    .nav-cta {
+      padding: 8px 18px;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #0a0a0a;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all 0.15s ease;
+      letter-spacing: -0.2px;
+    }
+
+    .nav-cta:hover { background: var(--accent2); transform: translateY(-1px); }
+
+    /* HERO */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* YouTube video background */
+    #yt-bg-wrapper {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    #yt-bg-wrapper iframe {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      /* Cubre toda el área manteniendo aspect ratio 16:9 */
+      width: 100vw;
+      height: 56.25vw; /* 16:9 */
+      min-height: 100vh;
+      min-width: 177.78vh; /* 16:9 */
+      transform: translate(-50%, -50%);
+      border: none;
+    }
+    /* Overlay oscuro encima del video para no opacar el contenido */
+    #yt-bg-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background: linear-gradient(
+        to bottom,
+        rgba(10,10,10,0.15) 0%,
+        rgba(10,10,10,0.10) 60%,
+        rgba(10,10,10,0.30) 100%
+      );
+    }
+    /* El contenido del hero siempre arriba del video */
+    .hero > *:not(#yt-bg-wrapper):not(#yt-bg-overlay) {
+      position: relative;
+      z-index: 2;
+    }
+    .hero-glow, .hero-glow2 {
+      z-index: 1 !important;
+    }
+
+    .hero-glow {
+      position: absolute;
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(ellipse, rgba(200,245,66,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-glow2 {
+      position: absolute;
+      bottom: 10%;
+      left: 20%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(ellipse, rgba(79,158,255,0.04) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent-dim);
+      border: 1px solid rgba(200,245,66,0.2);
+      border-radius: 100px;
+      padding: 6px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 28px;
+      animation: fadeUp 0.7s ease both;
+    }
+
+    .hero-badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 6px var(--accent);
+      animation: pulse 2s ease infinite;
+    }
+
+    h1.hero-title {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(52px, 8vw, 88px);
+      font-weight: 800;
+      letter-spacing: -3px;
+      line-height: 1;
+      margin-bottom: 24px;
+      animation: fadeUp 0.7s ease 0.1s both;
+    }
+
+    h1.hero-title .accent { color: var(--accent); }
+    h1.hero-title .dim { color: var(--text-muted); }
+
+    .hero-sub {
+      font-size: 17px;
+      color: var(--text);
+      max-width: 440px;
+      line-height: 1.7;
+      margin-bottom: 40px;
+      animation: fadeUp 0.7s ease 0.2s both;
+      font-weight: 400;
+      text-shadow: 0 1px 12px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.7);
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      animation: fadeUp 0.7s ease 0.3s both;
+    }
+
+    .btn-hero-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      background: var(--accent);
+      color: #0a0a0a;
+      font-size: 15px;
+      font-weight: 700;
+      border-radius: 12px;
+      text-decoration: none;
+      transition: all 0.15s ease;
+      letter-spacing: -0.3px;
+    }
+
+    .btn-hero-primary:hover { background: var(--accent2); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(200,245,66,0.2); }
+
+    .btn-hero-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      background: transparent;
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 500;
+      border-radius: 12px;
+      text-decoration: none;
+      border: 1px solid var(--border2);
+      transition: all 0.15s ease;
+    }
+
+    .btn-hero-secondary:hover { border-color: var(--text-muted); background: var(--bg3); }
+
+    .hero-stats {
+      display: flex;
+      align-items: center;
+      gap: 40px;
+      margin-top: 72px;
+      padding-top: 40px;
+      border-top: 1px solid var(--border);
+      animation: fadeUp 0.7s ease 0.4s both;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .hero-stat-num {
+      font-family: 'Syne', sans-serif;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      color: var(--text);
+    }
+
+    .hero-stat-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 2px;
+    }
+
+    .hero-stat-divider {
+      width: 1px;
+      height: 40px;
+      background: var(--border);
+    }
+
+    /* SECTIONS */
+    section {
+      padding: 100px 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+
+    .section-tag::before {
+      content: '';
+      width: 20px;
+      height: 1px;
+      background: var(--accent);
+    }
+
+    h2.section-title {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(32px, 4vw, 44px);
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      line-height: 1.1;
+      margin-bottom: 16px;
+    }
+
+    .section-sub {
+      font-size: 15px;
+      color: var(--text-mid);
+      max-width: 460px;
+      line-height: 1.7;
+      margin-bottom: 56px;
+    }
+
+    /* TOKENOMICS */
+    .tokenomics-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .token-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 24px;
+      transition: border-color 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .token-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--accent);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .token-card:hover { border-color: var(--border2); }
+    .token-card:hover::before { opacity: 1; }
+
+    .token-card-pct {
+      font-family: 'Syne', sans-serif;
+      font-size: 40px;
+      font-weight: 800;
+      letter-spacing: -2px;
+      color: var(--accent);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .token-card-amount {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    .token-card-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .token-card-desc {
+      font-size: 13px;
+      color: var(--text-mid);
+      line-height: 1.6;
+    }
+
+    .token-info-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .token-info-item {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .token-info-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .token-info-value {
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    /* DAO */
+    .dao-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .dao-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      transition: border-color 0.2s ease;
+    }
+
+    .dao-card:hover { border-color: var(--border2); }
+
+    .dao-card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: var(--accent-dim);
+      border: 1px solid rgba(200,245,66,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      margin-bottom: 18px;
+    }
+
+    .dao-card-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      letter-spacing: -0.3px;
+    }
+
+    .dao-card-desc {
+      font-size: 13px;
+      color: var(--text-mid);
+      line-height: 1.7;
+    }
+
+    /* ROADMAP */
+    .roadmap-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      position: relative;
+      max-width: 640px;
+    }
+
+    .roadmap-list::before {
+      content: '';
+      position: absolute;
+      left: 19px;
+      top: 24px;
+      bottom: 24px;
+      width: 1px;
+      background: var(--border);
+    }
+
+    .roadmap-item {
+      display: flex;
+      gap: 24px;
+      align-items: flex-start;
+      padding: 0 0 32px 0;
+      position: relative;
+    }
+
+    .roadmap-dot {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
+      transition: all 0.2s ease;
+    }
+
+    .roadmap-item.done .roadmap-dot {
+      background: var(--accent-dim);
+      border-color: rgba(200,245,66,0.3);
+    }
+
+    .roadmap-item.active .roadmap-dot {
+      background: var(--accent);
+      border-color: var(--accent);
+      box-shadow: 0 0 16px rgba(200,245,66,0.3);
+    }
+
+    .roadmap-content {
+      padding-top: 8px;
+    }
+
+    .roadmap-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .roadmap-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-done { background: var(--accent-dim); color: var(--accent); }
+    .badge-active { background: rgba(79,158,255,0.1); color: var(--blue); }
+    .badge-pending { background: var(--bg3); color: var(--text-muted); }
+
+    .roadmap-desc {
+      font-size: 13px;
+      color: var(--text-mid);
+      line-height: 1.6;
+    }
+
+    /* CONTRACT */
+    .contract-box {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .contract-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .contract-address {
+      font-family: monospace;
+      font-size: 14px;
+      color: var(--text);
+      word-break: break-all;
+    }
+
+    .btn-contract {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .btn-contract:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* COMPRAR VAGO */
+    .comprar-section {
+      text-align: center;
+      padding: 100px 24px;
+      border-top: 1px solid var(--border);
+    }
+    .comprar-section h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(28px, 4vw, 40px);
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 12px;
+    }
+    .comprar-section p {
+      color: var(--text-mid);
+      font-size: 16px;
+      max-width: 420px;
+      margin: 0 auto 40px;
+      line-height: 1.6;
+    }
+    .comprar-actions {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 48px;
+    }
+    .btn-comprar-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      background: var(--accent);
+      color: #0a0a0a;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 15px;
+      text-decoration: none;
+      transition: all 0.2s;
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-comprar-primary.activo {
+      opacity: 1;
+      cursor: pointer;
+    }
+    .btn-comprar-primary.activo:hover {
+      background: var(--accent2);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(200,245,66,0.2);
+    }
+    .btn-add-wallet {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .btn-add-wallet:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .comprar-badge-proximamente {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 18px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .comprar-contrato {
+      margin-top: 32px;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: monospace;
+    }
+    .comprar-contrato span {
+      color: var(--text-mid);
+    }
+
+    .comprar-chart-wrapper {
+      margin-top: 40px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .comprar-price-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+    }
+    .comprar-price-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .comprar-price-value {
+      font-family: 'Syne', sans-serif;
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--accent);
+    }
+    .comprar-price-source {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .comprar-chart-wrapper iframe {
+      width: 100%;
+      height: 600px;
+      border: none;
+      display: block;
+    }
+
+    /* AIRDROP CTA */
+    .airdrop-cta {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 64px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .airdrop-cta::before {
+      content: '';
+      position: absolute;
+      top: -100px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(ellipse, rgba(200,245,66,0.07) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .airdrop-cta h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(28px, 4vw, 40px);
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      margin-bottom: 16px;
+    }
+
+    .airdrop-cta p {
+      color: var(--text-mid);
+      font-size: 15px;
+      max-width: 400px;
+      margin: 0 auto 32px;
+      line-height: 1.7;
+    }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .footer-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 16px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+    }
+
+    .footer-link {
+      font-size: 13px;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .footer-link:hover { color: var(--text); }
+
+    .footer-copy {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* ANIMATIONS */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      .tokenomics-grid { grid-template-columns: 1fr; }
+      .token-info-row { grid-template-columns: 1fr; }
+      .dao-grid { grid-template-columns: 1fr; }
+      .airdrop-cta { padding: 40px 24px; }
+      footer { padding: 24px 20px; flex-direction: column; gap: 12px; text-align: center; }
+      .footer-links { justify-content: center; }
+    }
+
+    @media (max-width: 480px) {
+      .hero-stat-divider { display: none; }
+      .contract-box { flex-direction: column; }
+    }
+    /* Botón mute/unmute */
+    #sound-btn {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 100;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1px solid rgba(200,245,66,0.4);
+      background: rgba(10,10,10,0.6);
+      backdrop-filter: blur(8px);
+      color: var(--accent);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      font-size: 18px;
+    }
+    #sound-btn:hover {
+      border-color: var(--accent);
+      background: rgba(200,245,66,0.1);
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <div class="nav-logo-dot"></div>
+    VAGOS
+  </div>
+  <div class="nav-links">
+    <a href="#tokenomics" class="nav-link">Tokenomics</a>
+    <a href="#dao" class="nav-link">DAO</a>
+    <a href="#roadmap" class="nav-link">Roadmap</a>
+    <a href="#comprar" class="nav-link">Comprar token</a>
+    <a href="vagos-claim.html" class="nav-cta">Claim Airdrop →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+
+  <!-- VIDEO FONDO YOUTUBE -->
+  <!-- Reemplazá VIDEO_ID con el ID de tu video de YouTube (ej: dQw4w9WgXcQ) -->
+  <div id="yt-bg-wrapper">
+    <iframe id="yt-iframe"
+      src="https://www.youtube.com/embed/zaB38Pyvr5g?autoplay=1&mute=1&loop=1&playlist=zaB38Pyvr5g&controls=0&showinfo=0&rel=0&modestbranding=1&playsinline=1&enablejsapi=1"
+      allow="autoplay; encrypted-media"
+      allowfullscreen>
+    </iframe>
+  </div>
+  <div id="yt-bg-overlay"></div>
+
+  <div class="hero-glow"></div>
+  <div class="hero-glow2"></div>
+
+  <h1 class="hero-title">
+    Un token.<br/>
+    <span class="accent">Una gobernanza.</span><br/>
+    <span class="dim">Para todos y todas.</span>
+  </h1>
+
+  <p class="hero-sub">
+    VAGOS es un token de gobernanza descentralizada para un grupo de amigos. Supply fijo, DAO real, tesorería colectiva.
+  </p>
+
+  <div class="hero-actions">
+    <a href="vagos-claim.html" class="btn-hero-primary">
+      Reclamar Airdrop →
+    </a>
+    <a href="#tokenomics" class="btn-hero-secondary">
+      Ver Tokenomics
+    </a>
+  </div>
+
+  <div class="hero-stats">
+    <div>
+      <div class="hero-stat-num">1,000</div>
+      <div class="hero-stat-label">Supply total</div>
+    </div>
+    <div class="hero-stat-divider"></div>
+    <div>
+      <div class="hero-stat-num">65%</div>
+      <div class="hero-stat-label">Tesorería</div>
+    </div>
+    <div class="hero-stat-divider"></div>
+    <div>
+      <div class="hero-stat-num">Base</div>
+      <div class="hero-stat-label">Blockchain</div>
+    </div>
+  </div>
+</div>
+
+<!-- TOKENOMICS -->
+<section id="tokenomics">
+  <div class="section-tag">Tokenomics</div>
+  <h2 class="section-title">Distribución<br/>del token</h2>
+  <p class="section-sub">Suministro fijo de 1,000 tokens. No inflacionario. Sin posibilidad de emisión futura.</p>
+
+  <div class="tokenomics-grid">
+    <div class="token-card">
+      <div class="token-card-pct">25%</div>
+      <div class="token-card-title">Miembros</div>
+      <div class="token-card-desc">Distribuido a los miembros calificados mediante airdrop. Bloqueado por 270 días (9 meses) desde el TGE.</div>
+    </div>
+    <div class="token-card">
+      <div class="token-card-pct">65%</div>
+      <div class="token-card-title">DAO / Tesorería</div>
+      <div class="token-card-desc">Bajo custodia de la DAO. Destinados a incentivos, premios por participación y gobernanza colectiva.</div>
+    </div>
+    <div class="token-card">
+      <div class="token-card-pct">10%</div>
+      <div class="token-card-title">Liquidez</div>
+      <div class="token-card-desc">Destinados a proveer liquidez inicial en el exchange (DEX). Precio determinado por el mercado, oferta y demanda libre.</div>
+    </div>
+  </div>
+
+  <div class="token-info-row">
+    <div class="token-info-item">
+      <span class="token-info-label">🪙 Nombre</span>
+      <span class="token-info-value">VAGOS</span>
+    </div>
+    <div class="token-info-item">
+      <span class="token-info-label">⚡ Símbolo</span>
+      <span class="token-info-value">VAGO</span>
+    </div>
+    <div class="token-info-item">
+      <span class="token-info-label">📦 Supply total</span>
+      <span class="token-info-value">1,000</span>
+    </div>
+    <div class="token-info-item">
+      <span class="token-info-label">⛓️ Red</span>
+      <span class="token-info-value">Base (EVM)</span>
+    </div>
+    <div class="token-info-item">
+      <span class="token-info-label">🏷️ Tipo</span>
+      <span class="token-info-value">Token de gobernanza</span>
+    </div>
+    <div class="token-info-item">
+      <span class="token-info-label">✅ Contrato</span>
+      <span class="token-info-value">Verificado</span>
+    </div>
+  </div>
+</section>
+
+<!-- DAO -->
+<section id="dao" style="border-top: 1px solid var(--border); padding-top: 100px;">
+  <div class="section-tag">Gobernanza</div>
+  <h2 class="section-title">Una DAO<br/>real.</h2>
+  <p class="section-sub">El poder de decisión es colectivo. Ninguna persona controla la tesorería de forma unilateral.</p>
+
+  <div class="dao-grid">
+    <div class="dao-card">
+      <div class="dao-card-icon">🗳️</div>
+      <div class="dao-card-title">Votación por token</div>
+      <div class="dao-card-desc">El peso del voto es proporcional al balance de VAGO. Se requiere mínimo 1 token para participar. Si vendés tus tokens, perdés poder de gobernanza.</div>
+    </div>
+    <div class="dao-card">
+      <div class="dao-card-icon">🏦</div>
+      <div class="dao-card-title">Tesorería colectiva</div>
+      <div class="dao-card-desc">Los fondos viven en una wallet multisig controlada por la DAO. Para mover cualquier activo se necesita aprobación de la mayoría de los miembros.</div>
+    </div>
+    <div class="dao-card">
+      <div class="dao-card-icon">📋</div>
+      <div class="dao-card-title">Propuestas libres</div>
+      <div class="dao-card-desc">Cualquier miembro puede crear una propuesta para disponer de los fondos. Sin prohibiciones ni restricciones sobre qué se puede proponer.</div>
+    </div>
+    <div class="dao-card">
+      <div class="dao-card-icon">🔓</div>
+      <div class="dao-card-title">Renuncia voluntaria</div>
+      <div class="dao-card-desc">Un miembro puede renunciar a su poder de gobernanza en cualquier momento. Esto implica liquidar sus tokens pero no necesariamente abandonar el grupo.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ROADMAP -->
+<section id="roadmap" style="border-top: 1px solid var(--border); padding-top: 100px;">
+  <div class="section-tag">Roadmap</div>
+  <h2 class="section-title">Hoja de ruta</h2>
+  <p class="section-sub">Implementación fase por fase. Cada paso construye sobre el anterior.</p>
+
+  <div class="roadmap-list">
+    <div class="roadmap-item done">
+      <div class="roadmap-dot">✓</div>
+      <div class="roadmap-content">
+        <div class="roadmap-title">
+          Creación del token y distribución
+          <span class="roadmap-badge badge-done">Completado</span>
+        </div>
+        <div class="roadmap-desc">Deploy del contrato VAGOS en la blockchain de Base.</div>
+      </div>
+    </div>
+    <div class="roadmap-item done">
+      <div class="roadmap-dot">✓</div>
+      <div class="roadmap-content">
+        <div class="roadmap-title">
+          Listado en Exchange
+          <span class="roadmap-badge badge-done">Completado</span>
+        </div>
+        <div class="roadmap-desc">Liquidez disponible en Aerodrome. Ya podés comprar VAGO en el par VAGO/USDC.</div>
+      </div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-dot">3</div>
+      <div class="roadmap-content">
+        <div class="roadmap-title">
+          Despliegue de la DAO
+          <span class="roadmap-badge badge-pending">Pendiente</span>
+        </div>
+        <div class="roadmap-desc">Configuración de Snapshot para gobernanza. Creación de Safe multisig para la tesorería.</div>
+      </div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-dot">4</div>
+      <div class="roadmap-content">
+        <div class="roadmap-title">
+          Primera propuesta test
+          <span class="roadmap-badge badge-pending">Pendiente</span>
+        </div>
+        <div class="roadmap-desc">Lanzamiento de la primera votación simbólica para verificar el funcionamiento de la DAO.</div>
+      </div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-dot">5</div>
+      <div class="roadmap-content">
+        <div class="roadmap-title">
+          Fondo de inversión
+          <span class="roadmap-badge badge-pending">Pendiente</span>
+        </div>
+        <div class="roadmap-desc">Aportes iniciales de los miembros a la tesorería. Capital inicial para ser gestionado por la DAO.</div>
+      </div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-dot">6</div>
+      <div class="roadmap-content">
+        <div class="roadmap-title">
+          Propuestas libres
+          <span class="roadmap-badge badge-pending">Pendiente</span>
+        </div>
+        <div class="roadmap-desc">Apertura total de la gobernanza. Cualquier miembro puede proponer el uso de los fondos.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTRATO -->
+<section style="border-top: 1px solid var(--border); padding-top: 100px;">
+  <div class="section-tag">Transparencia</div>
+  <h2 class="section-title">Contrato<br/>verificado</h2>
+  <p class="section-sub">Código abierto, verificado en Basescan. Cualquiera puede auditarlo.</p>
+
+  <div class="contract-box">
+    <div>
+      <div class="contract-label">Token VAGOS — Base Mainnet</div>
+      <div class="contract-address">0x92baebc94D59DD82E08F4Fbb2d4eB5511017eDE5</div>
+    </div>
+    <a href="https://basescan.org/address/0x92baebc94D59DD82E08F4Fbb2d4eB5511017eDE5" target="_blank" class="btn-contract">
+      Ver en Basescan ↗
+    </a>
+  </div>
+</section>
+
+<!-- COMPRAR VAGO -->
+<section id="comprar" class="comprar-section">
+  <div class="container">
+    <h2>Comprar <span style="color: var(--accent)">VAGO</span></h2>
+    <p>Disponible en Aerodrome, el exchange descentralizado de Base.</p>
+
+    <div class="comprar-actions">
+      <a href="https://aerodrome.finance/swap?from=0x833589fcd6edb6e08f4c7c32d4f71b54bda02913&to=0x92baebc94D59DD82E08F4Fbb2d4eB5511017eDE5" target="_blank" class="btn-comprar-primary activo">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
+        Comprar en Aerodrome
+      </a>
+      <button class="btn-add-wallet" onclick="addTokenToWallet()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M16 12h.01"/></svg>
+        Agregar VAGO a wallet
+      </button>
+    </div>
+
+    <!-- PRECIO + GRÁFICA -->
+    <div class="comprar-chart-wrapper">
+      <div class="comprar-price-row">
+        <div style="display: flex; gap: 32px; align-items: center; flex-wrap: wrap;">
+          <div>
+            <div class="comprar-price-label">Precio VAGO</div>
+            <div class="comprar-price-value" id="vago-price">Cargando...</div>
+          </div>
+          <div>
+            <div class="comprar-price-label">24h</div>
+            <div class="comprar-price-value" id="vago-change" style="font-size: 16px;">—</div>
+          </div>
+          <div style="margin-left: auto;">
+            <div class="comprar-price-label">FDV</div>
+            <div class="comprar-price-value" id="vago-fdv" style="font-size: 16px; color: var(--text);">—</div>
+          </div>
+        </div>
+        <div class="comprar-price-source" style="margin-top: 8px;">via DEXScreener</div>
+      </div>
+      <iframe
+        src="https://dexscreener.com/base/0x5cEea4ef6cEb611AEdCF7baeC4f8Ec1E846FA807?embed=1&loadChartSettings=1&trades=0&info=0&chartTheme=dark&theme=dark&chartStyle=0&chartType=usd&interval=15"
+        title="VAGO/USDC chart">
+      </iframe>
+    </div>
+
+    <div class="comprar-contrato">
+      Contrato: <span>0x92baebc94D59DD82E08F4Fbb2d4eB5511017eDE5</span> · Base Mainnet
+    </div>
+  </div>
+</section>
+
+<!-- AIRDROP CTA -->
+<section style="border-top: 1px solid var(--border); padding-top: 100px;">
+  <div class="airdrop-cta">
+    <div class="hero-badge" style="margin: 0 auto 24px;">
+      <div class="hero-badge-dot"></div>
+      Airdrop activo
+    </div>
+    <h2>¿Sos miembro?<br/>Reclamá tus VAGOS.</h2>
+    <p>Conectá tu wallet para verificar tu asignación si es que sos elegible y reclamar tus tokens.</p>
+    <a href="vagos-claim.html" class="btn-hero-primary">
+      Ir al portal de claim →
+    </a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">
+    <div class="nav-logo-dot"></div>
+    VAGOS
+  </div>
+  <div class="footer-links">
+    <a href="#tokenomics" class="footer-link">Tokenomics</a>
+    <a href="#dao" class="footer-link">DAO</a>
+    <a href="#roadmap" class="footer-link">Roadmap</a>
+    <a href="https://basescan.org/address/0x92baebc94D59DD82E08F4Fbb2d4eB5511017eDE5" target="_blank" class="footer-link">Basescan</a>
+  </div>
+  <div class="footer-copy">© 2026 VAGOS DAO — Base Mainnet</div>
+</footer>
+
+<!-- Botón sonido -->
+<button id="sound-btn" title="Activar/desactivar sonido">🔇</button>
+
+<script>
+  // ──────────────────────────────────────────────
+  //  YOUTUBE BACKGROUND — reemplazá VIDEO_ID aquí
+  // ──────────────────────────────────────────────
+  // Precio en vivo desde DEXScreener
+  async function fetchVagoPrice() {
+    try {
+      const res = await fetch('https://api.dexscreener.com/latest/dex/tokens/0x92baebc94D59DD82E08F4Fbb2d4eB5511017eDE5');
+      const data = await res.json();
+      const pair = data?.pairs?.[0];
+      const price = pair?.priceUsd;
+      const change = pair?.priceChange?.h24;
+      const fdv = pair?.fdv;
+      const priceEl = document.getElementById('vago-price');
+      const changeEl = document.getElementById('vago-change');
+      const fdvEl = document.getElementById('vago-fdv');
+      if (price && priceEl) {
+        priceEl.textContent = '$' + parseFloat(price).toFixed(4);
+      } else if (priceEl) {
+        priceEl.textContent = 'N/D';
+      }
+      if (change !== undefined && changeEl) {
+        const val = parseFloat(change);
+        const sign = val >= 0 ? '+' : '';
+        changeEl.textContent = sign + val.toFixed(2) + '%';
+        changeEl.style.color = val >= 0 ? '#c8f542' : '#ff6b6b';
+      }
+      if (fdv !== undefined && fdvEl) {
+        fdvEl.textContent = '$' + parseFloat(fdv).toLocaleString('en-US', { maximumFractionDigits: 0 });
+      }
+    } catch(e) {
+      const el = document.getElementById('vago-price');
+      if (el) el.textContent = 'N/D';
+    }
+  }
+  fetchVagoPrice();
+  setInterval(fetchVagoPrice, 30000);
+
+  const YT_VIDEO_ID = 'zaB38Pyvr5g';
+
+  (function() {
+    const iframe = document.getElementById('yt-iframe');
+    if (!iframe) return;
+    const src = `https://www.youtube.com/embed/${YT_VIDEO_ID}?autoplay=1&mute=1&loop=1&playlist=${YT_VIDEO_ID}&controls=0&showinfo=0&rel=0&modestbranding=1&playsinline=1&enablejsapi=1`;
+    iframe.src = src;
+  })();
+
+  // Agregar token VAGO — detecta MetaMask, Coinbase, Rabby y cualquier wallet EIP-1193
+  async function addTokenToWallet() {
+    const TOKEN = {
+      address: '0x92baebc94D59DD82E08F4Fbb2d4eB5511017eDE5',
+      symbol: 'VAGO',
+      decimals: 18,
+    };
+
+    // Buscar proveedor disponible (MetaMask, Coinbase, Rabby, etc.)
+    let provider = null;
+
+    if (window.ethereum) {
+      // Si hay múltiples wallets (EIP-6963 / providers array)
+      if (window.ethereum.providers && window.ethereum.providers.length > 0) {
+        // Preferir MetaMask si está disponible, sino tomar el primero
+        provider = window.ethereum.providers.find(p => p.isMetaMask) || window.ethereum.providers[0];
+      } else {
+        provider = window.ethereum;
+      }
+    }
+
+    if (!provider) {
+      alert('No se detectó ninguna wallet.\nInstalá MetaMask, Coinbase Wallet, Rabby u otra wallet compatible con Base.');
+      return;
+    }
+
+    try {
+      // Asegurarse de estar en Base (chainId 8453)
+      const chainId = await provider.request({ method: 'eth_chainId' });
+      if (chainId !== '0x2105') {
+        try {
+          await provider.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0x2105' }],
+          });
+        } catch (switchErr) {
+          // Si Base no está agregada, la agregamos
+          if (switchErr.code === 4902) {
+            await provider.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: '0x2105',
+                chainName: 'Base',
+                nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+                rpcUrls: ['https://mainnet.base.org'],
+                blockExplorerUrls: ['https://basescan.org'],
+              }],
+            });
+          } else {
+            throw switchErr;
+          }
+        }
+      }
+
+      await provider.request({
+        method: 'wallet_watchAsset',
+        params: { type: 'ERC20', options: TOKEN },
+      });
+    } catch (err) {
+      if (err.code !== 4001) { // 4001 = usuario canceló, no mostrar error
+        alert('Hubo un error al agregar el token. Intentá manualmente con el contrato:\n' + TOKEN.address);
+      }
+    }
+  }
+  let muted = true;
+  document.getElementById('sound-btn').addEventListener('click', function() {
+    const iframe = document.getElementById('yt-iframe');
+    if (muted) {
+      iframe.contentWindow.postMessage('{"event":"command","func":"unMute","args":""}', '*');
+      iframe.contentWindow.postMessage('{"event":"command","func":"setVolume","args":[80]}', '*');
+      this.textContent = '🔊';
+    } else {
+      iframe.contentWindow.postMessage('{"event":"command","func":"mute","args":""}', '*');
+      this.textContent = '🔇';
+    }
+    muted = !muted;
+  });
+</script>
+
+</body>
+</html>
